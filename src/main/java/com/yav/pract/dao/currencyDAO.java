@@ -31,6 +31,13 @@ public class currencyDAO {
         return jdbcTemplate.query("SELECT * FROM currency WHERE dateRec=?", new Object[]{date},
                 new BeanPropertyRowMapper<>(currency.class));
     }
+    public currency showByDateCbId(Date date, String cbId) throws ParseException {
+        SimpleDateFormat frmt = new SimpleDateFormat("yyyy-MM-dd");
+        String dateFormat = frmt.format(date);
+        date = frmt.parse(dateFormat);
+        return jdbcTemplate.query("SELECT * FROM currency WHERE dateRec=? AND cbid=?", new Object[]{date, cbId},
+                new BeanPropertyRowMapper<>(currency.class)).stream().findAny().orElse(null);
+    }
     public void save(currency curr, Date date) throws ParseException {
         SimpleDateFormat frmt = new SimpleDateFormat("yyyy-MM-dd");
         String dateFormat = frmt.format(date);

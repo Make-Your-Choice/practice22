@@ -3,8 +3,6 @@ package com.yav.pract.parsers;
 import com.yav.pract.dao.currencyDAO;
 import com.yav.pract.models.currency;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
@@ -24,8 +22,6 @@ import java.util.List;
 
 @Component
 public class currencyParser {
-    //private DocumentBuilder documentBuilder;
-    //private Document document;
     @Autowired
     public currencyParser() {
     }
@@ -48,7 +44,6 @@ public class currencyParser {
                 for(int j = 0; j < currProps.getLength(); j++) {
                     Node bookProp = currProps.item(j);
                     if (bookProp.getNodeType() != Node.TEXT_NODE) {
-                        //newCurrency.setDateRec(date);
                         switch (bookProp.getNodeName()) {
                             case "NumCode": {
                                 newCurrency.setNumCode(bookProp.getChildNodes().item(0).getNodeValue());
@@ -71,7 +66,6 @@ public class currencyParser {
             }
         }
     }
-
     /*public static void main(String[] args) {
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
         dataSource.setDriverClassName("org.postgresql.Driver");
