@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>One during period</title>
+</head>
+<body>
+<table>
+    <caption><b>Курсы валюты за период</b></caption>
+    <tr>
+        <th>Код</th>
+        <th>Название</th>
+        <th>Цифровой код</th>
+        <th>Символьный код</th>
+        <th>Курс</th>
+    </tr>
+    <div th:each="item : ${currency}">
+        <tr><td th:utext="${item.getCbId()}">val</td>
+            <td th:utext="${item.getName()}">val</td>
+            <td th:utext="${item.getNumCode()}">val</td>
+            <td th:utext="${item.getCharCode()}">val</td>
+            <td th:utext="${item.getValue()}">val</td></tr>
+    </div>
+</table>
+</body>
+</html>

@@ -1,0 +1,6 @@
+com\yav\pract\parsers\currencyParser.class
+com\yav\pract\config\springConfig.class
+com\yav\pract\config\dispatcherServletInitializer.class
+com\yav\pract\controllers\currencyController.class
+com\yav\pract\dao\currencyDAO.class
+com\yav\pract\models\currency.class

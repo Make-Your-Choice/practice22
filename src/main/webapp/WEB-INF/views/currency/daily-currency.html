@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Daily currency</title>
+</head>
+<body>
+<div th:each="item : ${currency}">
+    <a th:utext="${item.getCbId() + '&nbsp;&nbsp;&nbsp;&nbsp;' + item.getName()+ '&nbsp;&nbsp;&nbsp;&nbsp;'
+    + item.getNumCode() + '&nbsp;&nbsp;&nbsp;&nbsp;' + item.getCharCode() + '&nbsp;&nbsp;&nbsp;&nbsp;'
+    + item.getValue()}">valute</a>
+</div>
+</body>
+</html>
