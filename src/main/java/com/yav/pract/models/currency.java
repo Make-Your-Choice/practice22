@@ -3,7 +3,6 @@ package com.yav.pract.models;
 import java.util.Date;
 
 public class currency {
-    private int id;
     private String cbId;
     private String name;
     private String numCode;
@@ -11,20 +10,13 @@ public class currency {
     private double value;
     public currency() {
     }
-    public currency(int id, String cbId, String name, String numCode,
+    public currency(String cbId, String name, String numCode,
                     String charCode, double value) {
-        this.id = id;
         this.cbId = cbId;
         this.name = name;
         this.numCode = numCode;
         this.charCode = charCode;
         this.value = value;
-    }
-    public int getId() {
-        return id;
-    }
-    public void setId(int id) {
-        this.id = id;
     }
     public String getCbId() {
         return cbId;
