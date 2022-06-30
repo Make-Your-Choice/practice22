@@ -7,15 +7,17 @@ public class currency {
     private String name;
     private String numCode;
     private String charCode;
+    private Date dateRec;
     private double value;
     public currency() {
     }
     public currency(String cbId, String name, String numCode,
-                    String charCode, double value) {
+                    Date dateRec, String charCode, double value) {
         this.cbId = cbId;
         this.name = name;
         this.numCode = numCode;
         this.charCode = charCode;
+        this.dateRec = dateRec;
         this.value = value;
     }
     public String getCbId() {
@@ -42,6 +44,8 @@ public class currency {
     public void setCharCode(String charCode) {
         this.charCode = charCode;
     }
+    public Date getDateRec() { return dateRec; }
+    public void setDateRec(Date dateRec) { this.dateRec = dateRec; }
     public double getValue() {
         return value;
     }

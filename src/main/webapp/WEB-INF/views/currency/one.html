@@ -13,13 +13,15 @@
         <th>Цифровой код</th>
         <th>Символьный код</th>
         <th>Курс</th>
+        <th>Дата</th>
     </tr>
     <div th:each="item : ${currency}">
         <tr><td th:utext="${item.getCbId()}">val</td>
             <td th:utext="${item.getName()}">val</td>
             <td th:utext="${item.getNumCode()}">val</td>
             <td th:utext="${item.getCharCode()}">val</td>
-            <td th:utext="${item.getValue()}">val</td></tr>
+            <td th:utext="${item.getValue()}">val</td>
+            <td th:utext="${item.getDateRec()}">val</td></tr>
     </div>
 </table>
 </body>

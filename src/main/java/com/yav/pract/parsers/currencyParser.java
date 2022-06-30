@@ -41,21 +41,22 @@ public class currencyParser {
                 NodeList currProps = node.getChildNodes();
                 currency newCurrency = new currency();
                 newCurrency.setCbId(attr.getNamedItem("ID").getNodeValue());
+                newCurrency.setDateRec(date);
                 for(int j = 0; j < currProps.getLength(); j++) {
-                    Node bookProp = currProps.item(j);
-                    if (bookProp.getNodeType() != Node.TEXT_NODE) {
-                        switch (bookProp.getNodeName()) {
+                    Node currProp = currProps.item(j);
+                    if (currProp.getNodeType() != Node.TEXT_NODE) {
+                        switch (currProp.getNodeName()) {
                             case "NumCode": {
-                                newCurrency.setNumCode(bookProp.getChildNodes().item(0).getNodeValue());
+                                newCurrency.setNumCode(currProp.getChildNodes().item(0).getNodeValue());
                             } break;
                             case "CharCode": {
-                                newCurrency.setCharCode(bookProp.getChildNodes().item(0).getNodeValue());
+                                newCurrency.setCharCode(currProp.getChildNodes().item(0).getNodeValue());
                             } break;
                             case "Name": {
-                                newCurrency.setName(bookProp.getChildNodes().item(0).getNodeValue());
+                                newCurrency.setName(currProp.getChildNodes().item(0).getNodeValue());
                             } break;
                             case "Value": {
-                                newCurrency.setValue(Double.parseDouble(bookProp.getChildNodes()
+                                newCurrency.setValue(Double.parseDouble(currProp.getChildNodes()
                                         .item(0).getNodeValue().replace(",", ".")));
                             } break;
                         }
