@@ -3,7 +3,6 @@ package com.yav.pract.controllers;
 import com.yav.pract.dao.currencyDAO;
 import com.yav.pract.models.currency;
 import com.yav.pract.parsers.currencyParser;
-import org.apache.commons.validator.GenericValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
@@ -30,25 +29,25 @@ public class currencyController {
     public currencyController(currencyDAO currencyDao, currencyParser parser) throws ParseException, IOException, ParserConfigurationException, SAXException {
         this.currencyDao = currencyDao;
         this.parser = parser;
-        Date dateCurrent = new Date();
+        //Date dateCurrent = new Date();
         frmt = new SimpleDateFormat("yyyy-MM-dd");
-        dateFormat = frmt.format(dateCurrent);
-        dateCurrent = frmt.parse(dateFormat);
-        if(this.currencyDao.showByDate(dateCurrent).isEmpty()) {
-            parser.parseByDate(this.currencyDao, dateCurrent);
+        dateFormat = "";
+        if(currencyDao.checkArchive() != 150) {
+            parser.parseArchive(currencyDao, 0);
+            parser.parseArchive(currencyDao, 1);
         }
+        //dateFormat = frmt.format(dateCurrent);
+        //dateCurrent = frmt.parse(dateFormat);
+        /*if(this.currencyDao.showByDate(dateCurrent).isEmpty()) {
+            parser.parseByDate(this.currencyDao, dateCurrent);
+        }*/
     }
-    /*@GetMapping("/hhh")
-    public String index(Model model) {
-        model.addAttribute("currency", currencyDao.index());
-        return "currency/hhh";
-    }*/
     @GetMapping("/all")
     public String showByDate(@RequestParam("date") @DateTimeFormat(pattern = "dd.MM.yyyy")
                              Date date, Model model) throws IOException, SAXException, ParserConfigurationException, ParseException {
         dateFormat = frmt.format(date);
         date = frmt.parse(dateFormat);
-        String[] parts = dateFormat.split("-");
+        /*String[] parts = dateFormat.split("-");
         int year = Integer.parseInt(parts[0]);
         int month = Integer.parseInt(parts[1]);
         int day = Integer.parseInt(parts[2]);
@@ -82,13 +81,12 @@ public class currencyController {
         if(flagMonth) {
             model.addAttribute("errMessage", "Date parameter is incorrect: invalid month");
             return "currency/error";
-        }
+        }*/
         Date dateCurrent = new Date();
         dateFormat = frmt.format(dateCurrent);
         dateCurrent = frmt.parse(dateFormat);
         Calendar calendar = Calendar.getInstance();
-        calendar.set(Calendar.MONTH, calendar.get(Calendar.MONTH) + 2);
-        calendar.set(calendar.DAY_OF_MONTH, 1);
+        calendar.set(calendar.DAY_OF_MONTH, calendar.get(Calendar.DAY_OF_MONTH) + 32);
         Date dateMax = calendar.getTime();
         dateFormat = frmt.format(dateMax);
         dateMax = frmt.parse(dateFormat);
@@ -101,14 +99,22 @@ public class currencyController {
                 return "currency/error";
             }
         }
-        if(currencyDao.showByDate(date).isEmpty()) {
+        /*if(currencyDao.showByDate(date).isEmpty()) {
             parser.parseByDate(currencyDao, date);
             if(currencyDao.showByDate(date).isEmpty()) {
                 model.addAttribute("errMessage", "No data found");
                 return "currency/error";
             }
         }
-        model.addAttribute("currency", currencyDao.showByDate(date));
+        model.addAttribute("currency", currencyDao.showByDate(date));*/
+        if(currencyDao.showAllByDate(date).isEmpty()) {
+            parser.parseByDayOrPeriod(currencyDao, date, null, null, null);
+            if(currencyDao.showAllByDate(date).isEmpty()) {
+                model.addAttribute("errMessage", "No data found");
+                return "currency/error";
+            }
+        }
+        model.addAttribute("currency", currencyDao.showAllByDate(date));
         return "currency/all";
     }
     @GetMapping("/one")
@@ -119,6 +125,7 @@ public class currencyController {
         date1 = frmt.parse(dateFormat);
         dateFormat = frmt.format(date2);
         date2 = frmt.parse(dateFormat);
+
         Date dateCurrent = new Date();
         dateFormat = frmt.format(dateCurrent);
         dateCurrent = frmt.parse(dateFormat);
@@ -129,7 +136,8 @@ public class currencyController {
         if(date1.before(dateCurrent) && date2.after(dateCurrent)) {
             date2 = dateCurrent;
         }
-        List<currency> currList = new ArrayList<>();
+
+        /*List<currency> currList = new ArrayList<>();
         Calendar calendar = Calendar.getInstance();
         currency curr;
         while(date1.compareTo(date2)<=0) {
@@ -147,7 +155,57 @@ public class currencyController {
             calendar.add(Calendar.DAY_OF_MONTH, 1);
             date1 = calendar.getTime();
         }
-        model.addAttribute("currency", currList);
+        model.addAttribute("currency", currList);*/
+        List<currency> currList = currencyDao.showOneByDateCbId(date1, date2, cbid);
+        Calendar calendar = Calendar.getInstance();
+        if(currList.isEmpty()) {
+            parser.parseByDayOrPeriod(currencyDao, date1, date2, cbid, null);
+        }
+        else {
+            calendar.setTime(date1);
+            calendar.add(Calendar.DATE, currList.size()-1);
+            if(calendar.getTime().compareTo(date2) != 0) {
+                parser.parseByDayOrPeriod(currencyDao, date1, date2, cbid, currList);
+            }
+        }
+        currList = currencyDao.showOneByDateCbId(date1, date2, cbid);
+        calendar.setTime(date1);
+        calendar.add(Calendar.DATE, currList.size()-1);
+        if(calendar.getTime().compareTo(date2) != 0) {
+            if(currList.get(0).getDateRec().compareTo(date1) != 0) {
+                parser.parseByDayOrPeriod(currencyDao, date1, null, null, null);
+                currList = currencyDao.showOneByDateCbId(date1, date2, cbid);
+            }
+            if(currList.get(currList.size()-1).getDateRec().compareTo(date2) != 0) {
+                parser.parseByDayOrPeriod(currencyDao, date2, null, null, null);
+                currList = currencyDao.showOneByDateCbId(date1, date2, cbid);
+            }
+        }
+        calendar.setTime(date1);
+        calendar.add(Calendar.DATE, currList.size()-1);
+        if(calendar.getTime().compareTo(date2) != 0) {
+            Date dateTemp = date1;
+            double tempVal = 0;
+            String tempCbId = "";
+            for(int i = 0; dateTemp.compareTo(date2)<=0; i++) {
+                if(currList.get(i).getDateRec().compareTo(dateTemp) == 0) {
+                    tempVal = currList.get(i).getValue();
+                    tempCbId = currList.get(i).getCbId();
+                }
+                else {
+                    currency curr =  new currency();
+                    curr.setCbId(tempCbId);
+                    curr.setDateRec(dateTemp);
+                    curr.setValue(tempVal);
+                    currList.add(i, curr);
+                    currencyDao.updateCurrencyVal(curr);
+                }
+                calendar.setTime(dateTemp);
+                calendar.add(Calendar.DAY_OF_MONTH, 1);
+                dateTemp = calendar.getTime();
+            }
+        }
+        model.addAttribute("currency", currencyDao.showOneByDateCbId(date1, date2, cbid));
         return "currency/one";
     }
     @GetMapping("/single")
@@ -159,8 +217,7 @@ public class currencyController {
         dateFormat = frmt.format(dateCurrent);
         dateCurrent = frmt.parse(dateFormat);
         Calendar calendar = Calendar.getInstance();
-        calendar.set(Calendar.MONTH, calendar.get(Calendar.MONTH) + 2);
-        calendar.set(calendar.DAY_OF_MONTH, 1);
+        calendar.set(calendar.DAY_OF_MONTH, calendar.get(Calendar.DAY_OF_MONTH) + 32);
         Date dateMax = calendar.getTime();
         dateFormat = frmt.format(dateMax);
         dateMax = frmt.parse(dateFormat);
@@ -173,7 +230,7 @@ public class currencyController {
                 return "currency/error";
             }
         }
-        currency curr = currencyDao.showByDateCbId(date, cbid);
+        /*currency curr = currencyDao.showByDateCbId(date, cbid);
         if(curr == null) {
             parser.parseByDate(currencyDao, date);
             curr = currencyDao.showByDateCbId(date, cbid);
@@ -182,10 +239,22 @@ public class currencyController {
                 return "currency/error";
             }
         }
+        model.addAttribute("currency", curr);*/
+        currency curr = currencyDao.showSingleByDateCbId(date, cbid);
+        if(curr == null) {
+            parser.parseByDayOrPeriod(currencyDao, date, null, null, null);
+            curr = currencyDao.showSingleByDateCbId(date, cbid);
+            if(curr == null) {
+                model.addAttribute("errMessage", "No data found");
+                return "currency/error";
+            }
+        }
         model.addAttribute("currency", curr);
         return "currency/single";
     }
-    /*public String index() {
+    @GetMapping("/hhh")
+    public String index() throws IOException, ParserConfigurationException, ParseException, SAXException {
+        //parser.parseArchive(currencyDao, 1);
         return "currency/hhh";
-    }*/
+    }
 }

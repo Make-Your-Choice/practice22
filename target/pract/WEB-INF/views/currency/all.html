@@ -5,13 +5,14 @@
     <title>All per day</title>
 </head>
 <body>
-<table>
-    <caption><b>Курсы валют за дату</b></caption>
+<table cellspacing="0" border="1" cellpadding="8">
+    <caption><h3><b>Курсы валют за дату</b></h3></caption>
     <tr>
         <th>Код</th>
         <th>Название</th>
         <th>Цифровой код</th>
         <th>Символьный код</th>
+        <th>Номинал</th>
         <th>Курс</th>
     </tr>
 <div th:each="item : ${currency}">
@@ -19,6 +20,7 @@
         <td th:utext="${item.getName()}">val</td>
         <td th:utext="${item.getNumCode()}">val</td>
         <td th:utext="${item.getCharCode()}">val</td>
+        <td th:utext="${item.getNominal()}">val</td>
         <td th:utext="${item.getValue()}">val</td></tr>
 </div>
 </table>

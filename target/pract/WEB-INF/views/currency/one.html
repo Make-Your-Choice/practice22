@@ -5,13 +5,14 @@
     <title>One during period</title>
 </head>
 <body>
-<table>
-    <caption><b>Курсы валюты за период</b></caption>
+<table cellspacing="0" border="1" cellpadding="8">
+    <caption><h3><b>Курсы валюты за период</b></h3></caption>
     <tr>
         <th>Код</th>
         <th>Название</th>
         <th>Цифровой код</th>
         <th>Символьный код</th>
+        <th>Номинал</th>
         <th>Курс</th>
         <th>Дата</th>
     </tr>
@@ -20,6 +21,7 @@
             <td th:utext="${item.getName()}">val</td>
             <td th:utext="${item.getNumCode()}">val</td>
             <td th:utext="${item.getCharCode()}">val</td>
+            <td th:utext="${item.getNominal()}">val</td>
             <td th:utext="${item.getValue()}">val</td>
             <td th:utext="${item.getDateRec()}">val</td></tr>
     </div>

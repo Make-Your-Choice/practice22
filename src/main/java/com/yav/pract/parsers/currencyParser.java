@@ -25,7 +25,140 @@ public class currencyParser {
     @Autowired
     public currencyParser() {
     }
-    public void parseByDate (currencyDAO dao, Date date) throws IOException, SAXException, ParserConfigurationException, ParseException {
+    public void parseByDayOrPeriod (currencyDAO dao, Date date1, Date date2, String cbId, List<currency> currList) throws IOException, SAXException, ParserConfigurationException, ParseException {
+        DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+        SimpleDateFormat frmt = new SimpleDateFormat("dd.MM.yyyy");
+        String dateFormat1 = frmt.format(date1);
+        String url = "";
+        if(date2 == null) {
+            url = "https://cbr.ru/scripts/XML_daily.asp?date_req=" + dateFormat1;
+        }
+        else {
+            String dateFormat2 = frmt.format(date2);
+            url = "https://cbr.ru/scripts/XML_dynamic.asp?date_req1=" + dateFormat1 + "&date_req2=" + dateFormat2 + "&VAL_NM_RQ=" + cbId;
+        }
+        Document document = documentBuilder.parse(url);
+        Node root = document.getDocumentElement();
+        NodeList nodes = root.getChildNodes();
+        List<currency> listCurrency = new ArrayList<>();
+        for (int i = 0; i < nodes.getLength(); i++) {
+            Node node = nodes.item(i);
+            NamedNodeMap attr = node.getAttributes();
+            if (node.getNodeType() != Node.TEXT_NODE) {
+                NodeList currProps = node.getChildNodes();
+                currency newCurrency = new currency();
+                if(date2 == null) {
+                    newCurrency.setCbId(attr.getNamedItem("ID").getNodeValue());
+                    newCurrency.setDateRec(date1);
+                }
+                else {
+                    SimpleDateFormat formatter = new SimpleDateFormat("dd.MM.yyyy");
+                    String dateString = attr.getNamedItem("Date").getNodeValue();
+                    newCurrency.setDateRec(formatter.parse(dateString));
+                    newCurrency.setCbId(attr.getNamedItem("Id").getNodeValue());
+                }
+                for(int j = 0; j < currProps.getLength(); j++) {
+                    Node currProp = currProps.item(j);
+                    if (currProp.getNodeType() != Node.TEXT_NODE) {
+                        switch (currProp.getNodeName()) {
+                            case "Nominal": {
+                                newCurrency.setNominal(Integer.parseInt(currProp.getChildNodes().item(0).getNodeValue()));
+                            } break;
+                            case "Value": {
+                                newCurrency.setValue(Double.parseDouble(currProp.getChildNodes()
+                                        .item(0).getNodeValue().replace(",", ".")));
+                            } break;
+                        }
+                    }
+                }
+                listCurrency.add(newCurrency);
+                boolean flag = false;
+                if(currList != null) {
+                    for(int k = 0; k < currList.size(); k++) {
+
+                        if(currList.get(k).getDateRec().compareTo(newCurrency.getDateRec()) == 0) {
+                            flag = true;
+                        }
+                    }
+                    if(!flag) {
+                        dao.updateCurrencyVal(newCurrency);
+                    }
+                }
+                else {
+                    currency tempCurr = dao.searchByDateCbIdCurrencyVal(newCurrency.getDateRec(), newCurrency.getCbId());
+                    if(tempCurr == null) {
+                        dao.updateCurrencyVal(newCurrency);
+                    }
+                }
+                /*if (date2 == null) {
+                    currency tempCurr1 = dao.searchByDateCbIdCurrencyVal(newCurrency.getDateRec(), newCurrency.getCbId());
+                    if(tempCurr1 == null) {
+                        dao.updateCurrencyVal(newCurrency);
+                    }
+                }
+                else {
+                    currency tempCurr2 = dao.searchByDateCbIdPCurrencyVal(newCurrency.getDateRec(), newCurrency.getCbIdP());
+                    if(tempCurr2 == null) {
+                        dao.updateCurrencyVal(newCurrency);
+                    }
+                }*/
+            }
+        }
+    }
+    public void parseArchive (currencyDAO dao, int d) throws IOException, SAXException, ParserConfigurationException, ParseException {
+        DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+        StringBuilder sb = new StringBuilder();
+        sb.append("");
+        sb.append(d);
+        String par = sb.toString();
+        String url = "https://cbr.ru/scripts/XML_valFull.asp?d=" + par;
+        Document document = documentBuilder.parse(url);
+        Node root = document.getDocumentElement();
+        NodeList nodes = root.getChildNodes();
+        List<currency> listCurrency = new ArrayList<>();
+        for (int i = 0; i < nodes.getLength(); i++) {
+            Node node = nodes.item(i);
+            NamedNodeMap attr = node.getAttributes();
+            if (node.getNodeType() != Node.TEXT_NODE) {
+                NodeList currProps = node.getChildNodes();
+                currency newCurrency = new currency();
+                newCurrency.setCbId(attr.getNamedItem("ID").getNodeValue());
+                for(int j = 0; j < currProps.getLength(); j++) {
+                    Node currProp = currProps.item(j);
+                    if (currProp.getNodeType() != Node.TEXT_NODE) {
+                        switch (currProp.getNodeName()) {
+                            case "ISO_Num_Code": {
+                                if(currProp.getChildNodes().item(0) == null) { newCurrency.setNumCode(null); }
+                                else { newCurrency.setNumCode(currProp.getChildNodes().item(0).getNodeValue()); }
+                            }
+                            break;
+                            case "ISO_Char_Code": {
+                                if(currProp.getChildNodes().item(0) == null) { newCurrency.setCharCode(null); }
+                                else { newCurrency.setCharCode(currProp.getChildNodes().item(0).getNodeValue()); }
+                            }
+                            break;
+                            case "ParentCode": {
+                                newCurrency.setCbIdP(currProp.getChildNodes().item(0).getNodeValue());
+                            } break;
+                            case "Name": {
+                                newCurrency.setName(currProp.getChildNodes().item(0).getNodeValue());
+                            } break;
+                            case "Nominal": {
+                                newCurrency.setNominal(Integer.parseInt(currProp.getChildNodes()
+                                        .item(0).getNodeValue()));
+                            } break;
+                        }
+                    }
+                }
+                listCurrency.add(newCurrency);
+                currency tempCurr = dao.searchByCbIdArchive(newCurrency.getCbId());
+                if(tempCurr == null) {
+                    dao.updateArchive(newCurrency);
+                }
+            }
+        }
+    }
+    /*public void parseByDate (currencyDAO dao, Date date) throws IOException, SAXException, ParserConfigurationException, ParseException {
         DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
         SimpleDateFormat frmt = new SimpleDateFormat("dd.MM.yyyy");
         String dateFormat = frmt.format(date);
@@ -45,6 +178,10 @@ public class currencyParser {
                 for(int j = 0; j < currProps.getLength(); j++) {
                     Node currProp = currProps.item(j);
                     if (currProp.getNodeType() != Node.TEXT_NODE) {
+                        if(currProp.getNodeName().equals("Value")) {
+                            newCurrency.setValue(Double.parseDouble(currProp.getChildNodes()
+                                    .item(0).getNodeValue().replace(",", ".")));
+                        }
                         switch (currProp.getNodeName()) {
                             case "NumCode": {
                                 newCurrency.setNumCode(currProp.getChildNodes().item(0).getNodeValue());
@@ -55,6 +192,9 @@ public class currencyParser {
                             case "Name": {
                                 newCurrency.setName(currProp.getChildNodes().item(0).getNodeValue());
                             } break;
+                            case "Nominal": {
+                                newCurrency.setNominal(Integer.parseInt(currProp.getChildNodes().item(0).getNodeValue()));
+                            } break;
                             case "Value": {
                                 newCurrency.setValue(Double.parseDouble(currProp.getChildNodes()
                                         .item(0).getNodeValue().replace(",", ".")));
@@ -63,10 +203,14 @@ public class currencyParser {
                     }
                 }
                 listCurrency.add(newCurrency);
-                dao.save(newCurrency, date);
+                currency tempCurr = dao.searchByDateCbIdCurrencyVal(newCurrency.getDateRec(), newCurrency.getCbId());
+                if(tempCurr == null) {
+                    dao.updateCurrencyVal(newCurrency);
+                }
+                //dao.save(newCurrency, date);
             }
         }
-    }
+    }*/
     /*public static void main(String[] args) {
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
         dataSource.setDriverClassName("org.postgresql.Driver");
@@ -151,6 +295,64 @@ public class currencyParser {
             ex.printStackTrace(System.out);
         } catch (IOException ex) {
             ex.printStackTrace(System.out);
+        }
+    }*/
+    /*public static void main(String[] args) throws IOException, SAXException, ParserConfigurationException {
+        DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+        StringBuilder sb = new StringBuilder();
+        sb.append("");
+        sb.append(0);
+        String par = sb.toString();
+        String url = "https://cbr.ru/scripts/XML_valFull.asp?d=" + par;
+        Document document = documentBuilder.parse(url);
+        Node root = document.getDocumentElement();
+        NodeList nodes = root.getChildNodes();
+        List<currency> listCurrency = new ArrayList<>();
+        for (int i = 0; i < nodes.getLength(); i++) {
+            Node node = nodes.item(i);
+            NamedNodeMap attr = node.getAttributes();
+            if (node.getNodeType() != Node.TEXT_NODE) {
+                NodeList currProps = node.getChildNodes();
+                currency newCurrency = new currency();
+                newCurrency.setCbId(attr.getNamedItem("ID").getNodeValue());
+                for(int j = 0; j < currProps.getLength(); j++) {
+                    Node currProp = currProps.item(j);
+                    if (currProp.getNodeType() != Node.TEXT_NODE) {
+                        switch (currProp.getNodeName()) {
+                            case "ISO_Num_Code": {
+                                if(currProp.getChildNodes().item(0) == null) { newCurrency.setNumCode(null); }
+                                else { newCurrency.setNumCode(currProp.getChildNodes().item(0).getNodeValue()); }
+                            }
+                            break;
+                            case "ISO_Char_Code": {
+                                if(currProp.getChildNodes().item(0) == null) { newCurrency.setCharCode(null); }
+                                else { newCurrency.setCharCode(currProp.getChildNodes().item(0).getNodeValue()); }
+                            }
+                            break;
+                            case "ParentCode": {
+                                newCurrency.setCbIdP(currProp.getChildNodes().item(0).getNodeValue());
+                            } break;
+                            case "Name": {
+                                newCurrency.setName(currProp.getChildNodes().item(0).getNodeValue());
+                            } break;
+                            case "Nominal": {
+                                newCurrency.setNominal(Integer.parseInt(currProp.getChildNodes()
+                                        .item(0).getNodeValue()));
+                            } break;
+                        }
+                    }
+                }
+                listCurrency.add(newCurrency);
+            }
+        }
+        for(int i = 0; i < listCurrency.size(); i++) {
+            System.out.println(listCurrency.get(i).getCbId());
+            System.out.println(listCurrency.get(i).getNumCode());
+            System.out.println(listCurrency.get(i).getCharCode());
+            System.out.println(listCurrency.get(i).getName());
+            System.out.println(listCurrency.get(i).getValue());
+
+            System.out.println("===========>>>>");
         }
     }*/
 }
