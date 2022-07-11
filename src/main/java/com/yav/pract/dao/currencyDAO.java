@@ -1,15 +1,16 @@
 package com.yav.pract.dao;
 
 import com.yav.pract.models.currency;
+import com.yav.pract.models.currencyDemo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import java.sql.ResultSet;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 @Component
 public class currencyDAO {
@@ -57,19 +58,46 @@ public class currencyDAO {
                 curr.getCbId(), curr.getCbIdP(), curr.getName(), curr.getNumCode(),
                 curr.getCharCode(), curr.getNominal());
     }
-    public void updateCurrencyVal(currency curr) {
-        int pKey = jdbcTemplate.queryForObject("SELECT ida FROM archive WHERE cbid=?",
-                new Object[]{curr.getCbId()}, int.class);
+    /*public void updateCurrencyVal(currency curr) {
+        int pKey = jdbcTemplate.queryForObject("SELECT * FROM find_id(?)", new Object[]{curr.getCbId()}, int.class);
         jdbcTemplate.update("INSERT INTO currencyval (ida, value, daterec)" +
                         "VALUES(?, ?, ?)",
                 pKey, curr.getValue(), curr.getDateRec());
+    }*/
+    public void updateCurrencyDay(currency curr) {
+        int pKey = jdbcTemplate.queryForObject("SELECT * FROM find_id(?)", new Object[]{curr.getCbId()}, int.class);
+        jdbcTemplate.update("INSERT INTO currencyday (ida, value, daterec)" +
+                        "VALUES(?, ?, ?)",
+                pKey, curr.getValue(), curr.getDateRec());
     }
-    public currency searchByDateCbIdCurrencyVal(Date date, String cbId) throws ParseException {
+    public void updateCurrencyPeriod(currency curr) {
+        int pKey = jdbcTemplate.queryForObject("SELECT * FROM find_id(?)", new Object[]{curr.getCbId()}, int.class);
+        jdbcTemplate.update("INSERT INTO currencyperiod (ida, value, daterec)" +
+                        "VALUES(?, ?, ?)",
+                pKey, curr.getValue(), curr.getDateRec());
+    }
+    /*public currency searchByDateCbIdCurrencyVal(Date date, String cbId) throws ParseException {
         SimpleDateFormat frmt = new SimpleDateFormat("yyyy-MM-dd");
         String dateFormat = frmt.format(date);
         date = frmt.parse(dateFormat);
-        int pKey = jdbcTemplate.queryForObject("SELECT ida FROM archive WHERE cbid=?", new Object[]{cbId}, int.class);
-        return jdbcTemplate.query("SELECT * FROM currencyval WHERE daterec=? AND ida=?", new Object[]{date, pKey},
+        return jdbcTemplate.query("SELECT a.*, c.value, c.daterec FROM archive a" +
+                        " JOIN currencyval c ON a.ida=c.ida AND a.cbid=? AND c.daterec=?", new Object[]{cbId, date},
+                new BeanPropertyRowMapper<>(currency.class)).stream().findAny().orElse(null);
+    }*/
+    public currency searchByDateCbIdCurrencyDay(Date date, String cbId) throws ParseException {
+        SimpleDateFormat frmt = new SimpleDateFormat("yyyy-MM-dd");
+        String dateFormat = frmt.format(date);
+        date = frmt.parse(dateFormat);
+        return jdbcTemplate.query("SELECT a.*, c.value, c.daterec FROM archive a" +
+                        " JOIN currencyday c ON a.ida=c.ida AND a.cbid=? AND c.daterec=?", new Object[]{cbId, date},
+                new BeanPropertyRowMapper<>(currency.class)).stream().findAny().orElse(null);
+    }
+    public currency searchByDateCbIdCurrencyPeriod(Date date, String cbId) throws ParseException {
+        SimpleDateFormat frmt = new SimpleDateFormat("yyyy-MM-dd");
+        String dateFormat = frmt.format(date);
+        date = frmt.parse(dateFormat);
+        return jdbcTemplate.query("SELECT a.*, c.value, c.daterec FROM archive a" +
+                        " JOIN currencyperiod c ON a.ida=c.ida AND a.cbid=? AND c.daterec=?", new Object[]{cbId, date},
                 new BeanPropertyRowMapper<>(currency.class)).stream().findAny().orElse(null);
     }
     public currency searchByCbIdArchive(String cbId) {
@@ -89,7 +117,7 @@ public class currencyDAO {
         String dateFormat = frmt.format(date);
         date = frmt.parse(dateFormat);
         return jdbcTemplate.query("SELECT a.*, c.value, c.daterec FROM archive a" +
-                        " JOIN currencyval c ON a.ida=c.ida AND c.daterec=?", new Object[]{date},
+                        " JOIN currencyday c ON a.ida=c.ida AND c.daterec=?", new Object[]{date},
                 new BeanPropertyRowMapper<>(currency.class));
     }
     public List<currency> showOneByDateCbId(Date date1, Date date2, String cbId) throws ParseException {
@@ -99,7 +127,7 @@ public class currencyDAO {
         String dateFormat2 = frmt.format(date2);
         date2 = frmt.parse(dateFormat2);
         return jdbcTemplate.query("SELECT a.*, c.value, c.daterec FROM archive a" +
-                        " JOIN currencyval c ON a.ida=c.ida AND a.cbid=? AND c.daterec BETWEEN ? AND ? ORDER BY c.daterec",
+                        " JOIN currencyperiod c ON a.ida=c.ida AND a.cbid=? AND c.daterec BETWEEN ? AND ? ORDER BY c.daterec",
                 new Object[]{cbId, date1, date2}, new BeanPropertyRowMapper<>(currency.class));
     }
     public currency showSingleByDateCbId(Date date, String cbId) throws ParseException {
@@ -107,11 +135,38 @@ public class currencyDAO {
         String dateFormat = frmt.format(date);
         date = frmt.parse(dateFormat);
         return jdbcTemplate.query("SELECT a.*, c.value, c.daterec FROM archive a" +
-                        " JOIN currencyval c ON a.ida=c.ida AND a.cbid=? AND c.daterec=?", new Object[]{cbId, date},
+                        " JOIN currencyday c ON a.ida=c.ida AND a.cbid=? AND c.daterec=?", new Object[]{cbId, date},
                 new BeanPropertyRowMapper<>(currency.class)).stream().findAny().orElse(null);
     }
     public int checkArchive() {
         return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM archive", new Object[]{}, int.class);
+    }
+
+    /*public Map<String, String> getCbIdName() {
+        Map<String, String> newMap = new HashMap<>();
+        jdbcTemplate.query("SELECT cbid, name FROM archive", (ResultSet rs) -> {
+            while(rs.next()) {
+                newMap.put(rs.getString("cbid"), rs.getString("name"));
+            }
+        });
+        return newMap;
+    }*/
+    public List<currencyDemo> getCbIdName() {
+        return jdbcTemplate.query("SELECT ida, cbid, name FROM archive", new BeanPropertyRowMapper<>(currencyDemo.class));
+    }
+
+    public List<currency> showByPeriod(Date date1, Date date2, String cbid, String cbidp) throws ParseException {
+        SimpleDateFormat frmt = new SimpleDateFormat("yyyy-MM-dd");
+        String dateFormat1 = frmt.format(date1);
+        date1 = frmt.parse(dateFormat1);
+        String dateFormat2 = frmt.format(date2);
+        date2 = frmt.parse(dateFormat2);
+        return jdbcTemplate.query("SELECT a.*, cp.value, cp.daterec FROM archive a JOIN currencyperiod cp on a.ida=cp.ida AND" +
+                "(a.cbid=? OR a.cbidp=?) AND cp.daterec BETWEEN ? AND ? ORDER BY cp.daterec", new Object[]{cbid, cbidp, date1, date2},
+                new BeanPropertyRowMapper<>(currency.class));
+    }
+    public String getCbIdP(String cbid) {
+        return jdbcTemplate.queryForObject("SELECT * FROM search_cbidp(?)", new Object[]{cbid}, String.class);
     }
     /*public List<currency> showByPeriod(Date date1, Date date2, String cbId) throws ParseException {
         //date.replaceAll("/", ".");

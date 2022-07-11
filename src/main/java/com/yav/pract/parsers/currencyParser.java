@@ -25,7 +25,7 @@ public class currencyParser {
     @Autowired
     public currencyParser() {
     }
-    public void parseByDayOrPeriod (currencyDAO dao, Date date1, Date date2, String cbId, List<currency> currList) throws IOException, SAXException, ParserConfigurationException, ParseException {
+    public void parseByDayOrPeriod (currencyDAO dao, Date date1, Date date2, String cbId, List<currency> currList, int type) throws IOException, SAXException, ParserConfigurationException, ParseException {
         DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
         SimpleDateFormat frmt = new SimpleDateFormat("dd.MM.yyyy");
         String dateFormat1 = frmt.format(date1);
@@ -73,23 +73,44 @@ public class currencyParser {
                 }
                 listCurrency.add(newCurrency);
                 boolean flag = false;
-                if(currList != null) {
-                    for(int k = 0; k < currList.size(); k++) {
+                if(date2 != null) {
+                    if(currList != null) {
+                        for(int k = 0; k < currList.size(); k++) {
 
-                        if(currList.get(k).getDateRec().compareTo(newCurrency.getDateRec()) == 0) {
-                            flag = true;
+                            if(currList.get(k).getDateRec().compareTo(newCurrency.getDateRec()) == 0) {
+                                flag = true;
+                            }
+                        }
+                        if(!flag) {
+                            dao.updateCurrencyPeriod(newCurrency);
                         }
                     }
-                    if(!flag) {
-                        dao.updateCurrencyVal(newCurrency);
+                    else {
+                        currency tempCurr = dao.searchByDateCbIdCurrencyPeriod(newCurrency.getDateRec(), newCurrency.getCbId());
+                        if(tempCurr == null) {
+                            dao.updateCurrencyPeriod(newCurrency);
+                        }
                     }
                 }
                 else {
-                    currency tempCurr = dao.searchByDateCbIdCurrencyVal(newCurrency.getDateRec(), newCurrency.getCbId());
-                    if(tempCurr == null) {
-                        dao.updateCurrencyVal(newCurrency);
+                    switch (type) {
+                        case 1: {
+                            currency tempCurr = dao.searchByDateCbIdCurrencyDay(newCurrency.getDateRec(), newCurrency.getCbId());
+                            if (tempCurr == null) {
+                                dao.updateCurrencyDay(newCurrency);
+                            } break;
+                        }
+                        case 2: {
+                            if(newCurrency.getCbId().compareTo(cbId) == 0) {
+                                currency tempCurr = dao.searchByDateCbIdCurrencyPeriod(newCurrency.getDateRec(), newCurrency.getCbId());
+                                if (tempCurr == null) {
+                                    dao.updateCurrencyPeriod(newCurrency);
+                                }
+                            } break;
+                        }
                     }
                 }
+
                 /*if (date2 == null) {
                     currency tempCurr1 = dao.searchByDateCbIdCurrencyVal(newCurrency.getDateRec(), newCurrency.getCbId());
                     if(tempCurr1 == null) {

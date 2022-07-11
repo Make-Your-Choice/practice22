@@ -3,13 +3,13 @@ package com.yav.pract.controllers;
 import com.yav.pract.dao.currencyDAO;
 import com.yav.pract.models.currency;
 import com.yav.pract.parsers.currencyParser;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.view.json.MappingJackson2JsonView;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -18,8 +18,9 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-@Controller
+@RestController
 @RequestMapping("/currency")
+@CrossOrigin
 public class currencyController {
     private currencyDAO currencyDao;
     private currencyParser parser;
@@ -29,21 +30,21 @@ public class currencyController {
     public currencyController(currencyDAO currencyDao, currencyParser parser) throws ParseException, IOException, ParserConfigurationException, SAXException {
         this.currencyDao = currencyDao;
         this.parser = parser;
-        //Date dateCurrent = new Date();
+        Date dateCurrent = new Date();
         frmt = new SimpleDateFormat("yyyy-MM-dd");
         dateFormat = "";
         if(currencyDao.checkArchive() != 150) {
             parser.parseArchive(currencyDao, 0);
             parser.parseArchive(currencyDao, 1);
         }
-        //dateFormat = frmt.format(dateCurrent);
-        //dateCurrent = frmt.parse(dateFormat);
-        /*if(this.currencyDao.showByDate(dateCurrent).isEmpty()) {
-            parser.parseByDate(this.currencyDao, dateCurrent);
-        }*/
+        dateFormat = frmt.format(dateCurrent);
+        dateCurrent = frmt.parse(dateFormat);
+        if(this.currencyDao.showAllByDate(dateCurrent).isEmpty()) {
+            parser.parseByDayOrPeriod(this.currencyDao, dateCurrent, null, null, null, 1);
+        }
     }
     @GetMapping("/all")
-    public String showByDate(@RequestParam("date") @DateTimeFormat(pattern = "dd.MM.yyyy")
+    public MappingJackson2JsonView showByDate(@RequestParam("date") @DateTimeFormat(pattern = "dd.MM.yyyy")
                              Date date, Model model) throws IOException, SAXException, ParserConfigurationException, ParseException {
         dateFormat = frmt.format(date);
         date = frmt.parse(dateFormat);
@@ -96,7 +97,10 @@ public class currencyController {
             }
             else {
                 model.addAttribute("errMessage", "No data found");
-                return "currency/error";
+                MappingJackson2JsonView view = new MappingJackson2JsonView();
+                view.setPrettyPrint(true);
+                return view;
+                //return "currency/error";
             }
         }
         /*if(currencyDao.showByDate(date).isEmpty()) {
@@ -108,17 +112,23 @@ public class currencyController {
         }
         model.addAttribute("currency", currencyDao.showByDate(date));*/
         if(currencyDao.showAllByDate(date).isEmpty()) {
-            parser.parseByDayOrPeriod(currencyDao, date, null, null, null);
+            parser.parseByDayOrPeriod(currencyDao, date, null, null, null, 1);
             if(currencyDao.showAllByDate(date).isEmpty()) {
                 model.addAttribute("errMessage", "No data found");
-                return "currency/error";
+                MappingJackson2JsonView view = new MappingJackson2JsonView();
+                view.setPrettyPrint(true);
+                return view;
+                //return "currency/error";
             }
         }
         model.addAttribute("currency", currencyDao.showAllByDate(date));
-        return "currency/all";
+        //return "currency/all";
+        MappingJackson2JsonView view = new MappingJackson2JsonView();
+        view.setPrettyPrint(true);
+        return view;
     }
     @GetMapping("/one")
-    public String showByPeriod(@RequestParam("date1") @DateTimeFormat(pattern = "dd.MM.yyyy") Date date1,
+    public MappingJackson2JsonView showByPeriodOld(@RequestParam("date1") @DateTimeFormat(pattern = "dd.MM.yyyy") Date date1,
                                @RequestParam("date2") @DateTimeFormat(pattern = "dd.MM.yyyy") Date date2,
                                @RequestParam("cbid") String cbid, Model model) throws ParseException, IOException, ParserConfigurationException, SAXException {
         dateFormat = frmt.format(date1);
@@ -131,7 +141,10 @@ public class currencyController {
         dateCurrent = frmt.parse(dateFormat);
         if(date1.after(dateCurrent) && date2.after(dateCurrent) || date1.after(dateCurrent)) {
             model.addAttribute("errMessage", "No data found");
-            return "currency/error";
+            MappingJackson2JsonView view = new MappingJackson2JsonView();
+            view.setPrettyPrint(true);
+            return view;
+            //return "currency/error";
         }
         if(date1.before(dateCurrent) && date2.after(dateCurrent)) {
             date2 = dateCurrent;
@@ -158,28 +171,70 @@ public class currencyController {
         model.addAttribute("currency", currList);*/
         List<currency> currList = currencyDao.showOneByDateCbId(date1, date2, cbid);
         Calendar calendar = Calendar.getInstance();
-        if(currList.isEmpty()) {
+        /*if(currList.isEmpty()) {
             parser.parseByDayOrPeriod(currencyDao, date1, date2, cbid, null);
+        }*/
+        /*if(currList.isEmpty()) {
+            currList = currencyDao.showOneByDateCbId(date1, date2, StringUtils.chop(cbid));
+            if(currList.isEmpty()) {
+                parser.parseByDayOrPeriod(currencyDao, date1, date2, cbid, null);
+                currList = currencyDao.showOneByDateCbId(date1, date2, StringUtils.chop(cbid));
+                if(currList.isEmpty()) {
+                    parser.parseByDayOrPeriod(currencyDao, date1, date2, StringUtils.chop(cbid), null);
+                }
+            }
+        }*/
+        if(currList.isEmpty()) {
+            parser.parseByDayOrPeriod(currencyDao, date1, date2, cbid, null, 0);
         }
         else {
             calendar.setTime(date1);
             calendar.add(Calendar.DATE, currList.size()-1);
             if(calendar.getTime().compareTo(date2) != 0) {
-                parser.parseByDayOrPeriod(currencyDao, date1, date2, cbid, currList);
+                parser.parseByDayOrPeriod(currencyDao, date1, date2, cbid, currList, 0);
             }
         }
         currList = currencyDao.showOneByDateCbId(date1, date2, cbid);
+        if(currList.isEmpty()) {
+            parser.parseByDayOrPeriod(currencyDao, date1, null, cbid, null, 2);
+            currList = currencyDao.showOneByDateCbId(date1, date2, cbid);
+            if(currList.isEmpty()) {
+                model.addAttribute("errMessage", "No data found! Check if the params are correct");
+                MappingJackson2JsonView view = new MappingJackson2JsonView();
+                view.setPrettyPrint(true);
+                return view;
+            }
+        }
         calendar.setTime(date1);
         calendar.add(Calendar.DATE, currList.size()-1);
         if(calendar.getTime().compareTo(date2) != 0) {
-            if(currList.get(0).getDateRec().compareTo(date1) != 0) {
-                parser.parseByDayOrPeriod(currencyDao, date1, null, null, null);
+            /*if(currList.get(0).getDateRec().compareTo(date1) != 0) {
+                parser.parseByDayOrPeriod(currencyDao, date1, null, cbid, null, 2);
                 currList = currencyDao.showOneByDateCbId(date1, date2, cbid);
-            }
+                if(currList.isEmpty()) {
+                    model.addAttribute("errMessage", "No data found! Check if the params are correct");
+                    MappingJackson2JsonView view = new MappingJackson2JsonView();
+                    view.setPrettyPrint(true);
+                    return view;
+                }
+            }*/
             if(currList.get(currList.size()-1).getDateRec().compareTo(date2) != 0) {
-                parser.parseByDayOrPeriod(currencyDao, date2, null, null, null);
+                parser.parseByDayOrPeriod(currencyDao, date2, null, cbid, null, 2);
                 currList = currencyDao.showOneByDateCbId(date1, date2, cbid);
+                if(currList.isEmpty()) {
+                    model.addAttribute("errMessage", "No data found! Check if the params are correct");
+                    MappingJackson2JsonView view = new MappingJackson2JsonView();
+                    view.setPrettyPrint(true);
+                    return view;
+                }
             }
+        }
+        currList = currencyDao.showOneByDateCbId(date1, date2, cbid);
+        if(currList.isEmpty()) {
+            model.addAttribute("errMessage", "No data found! Check if the params are correct");
+            MappingJackson2JsonView view = new MappingJackson2JsonView();
+            view.setPrettyPrint(true);
+            return view;
         }
         calendar.setTime(date1);
         calendar.add(Calendar.DATE, currList.size()-1);
@@ -198,7 +253,7 @@ public class currencyController {
                     curr.setDateRec(dateTemp);
                     curr.setValue(tempVal);
                     currList.add(i, curr);
-                    currencyDao.updateCurrencyVal(curr);
+                    currencyDao.updateCurrencyPeriod(curr);
                 }
                 calendar.setTime(dateTemp);
                 calendar.add(Calendar.DAY_OF_MONTH, 1);
@@ -206,10 +261,137 @@ public class currencyController {
             }
         }
         model.addAttribute("currency", currencyDao.showOneByDateCbId(date1, date2, cbid));
-        return "currency/one";
+        //return "currency/one";
+        MappingJackson2JsonView view = new MappingJackson2JsonView();
+        view.setPrettyPrint(true);
+        return view;
     }
+
+    @GetMapping("/period")
+    public MappingJackson2JsonView showByPeriod(@RequestParam("date1") @DateTimeFormat(pattern = "dd.MM.yyyy") Date date1,
+                                                @RequestParam("date2") @DateTimeFormat(pattern = "dd.MM.yyyy") Date date2,
+                                                @RequestParam("cbid") String cbid, Model model) throws ParseException, IOException, ParserConfigurationException, SAXException {
+        MappingJackson2JsonView view = new MappingJackson2JsonView();
+        view.setPrettyPrint(true);
+        List<currency> currList = new ArrayList<>();
+        Calendar calendar = Calendar.getInstance();
+        Currency currTmp;
+        dateFormat = frmt.format(date1);
+        date1 = frmt.parse(dateFormat);
+        dateFormat = frmt.format(date2);
+        date2 = frmt.parse(dateFormat);
+
+        Date dateCurrent = new Date();
+        dateFormat = frmt.format(dateCurrent);
+        dateCurrent = frmt.parse(dateFormat);
+        int day = checkDate(date1, dateCurrent);
+        if(day > 0) {
+            model.addAttribute("errMessage", "No data found! Check if the params are correct");
+        } else if (date1.compareTo(date2) >= 0) {
+            model.addAttribute("errMessage", "No data found! Check if the params are correct");
+        } else {
+            currList.addAll(getListCurrencyPeriod(date1, date2, cbid, false));
+            if(currList.isEmpty()) {
+                String cbidp = currencyDao.getCbIdP(cbid);
+                currList.clear();
+                currList.addAll(getListCurrencyPeriod(date1, date2, cbidp, true));
+                if(currList.isEmpty()) {
+                    model.addAttribute("errMessage", "No data found! Check if the params are correct");
+                } else {
+                    model.addAttribute("currency", currList);
+                }
+            } else {
+                model.addAttribute("currency", currList);
+            }
+        }
+        return view;
+    }
+    public int checkDate(Date date1, Date date2) {
+        long milliseconds = date1.getTime() - date2.getTime();
+        int day = (int)(milliseconds / (24 * 60 * 60 * 1000));
+        return day;
+    }
+    public List<currency> getListCurrencyPeriod(Date date1, Date date2, String cbid, boolean flagp) throws IOException, ParserConfigurationException, ParseException, SAXException {
+        Date dateTmp = date1;
+        Calendar calendar = Calendar.getInstance();
+        List<currency> currList = new ArrayList<>();
+        currency currTmp;
+        int day;
+        String cbidp = new String();
+        if (flagp == false) {
+            cbidp = currencyDao.getCbIdP(cbid);
+        } else {
+            cbidp = cbid;
+        }
+        currList = currencyDao.showByPeriod(date1, date2, cbid, cbidp);
+        day = checkDate(date1, date2);
+        if (currList.size() != Math.abs(day) + 1) { //unsure??????
+            parser.parseByDayOrPeriod(currencyDao, date1, date2, cbid, currList, 2);
+            currList = currencyDao.showByPeriod(date1, date2, cbid, cbidp);
+        }
+        if (currList.size() != Math.abs(day) + 1) {
+            currList.clear();
+            List<Date> dateList = new ArrayList<>();
+            dateTmp = date1;
+            while (dateTmp.compareTo(date2) <= 0) {
+                currTmp = currencyDao.searchByDateCbIdCurrencyPeriod(dateTmp, cbid);
+                if (currTmp != null) {
+                    currList.add(currTmp);
+                } else {
+                    dateList.add(dateTmp);
+                }
+                calendar.setTime(dateTmp);
+                calendar.add(Calendar.DAY_OF_MONTH, 1);
+                dateTmp = calendar.getTime();
+            }
+            if (currList.isEmpty()) {
+                parser.parseByDayOrPeriod(currencyDao, date1, date2, cbid, null, 2);
+                currTmp = currencyDao.searchByDateCbIdCurrencyPeriod(date1, cbid);
+                if (currTmp != null) {
+                    currList.add(currTmp);
+                }
+            }
+            if (!currList.isEmpty()) {
+                if (currList.get(0).getDateRec().compareTo(date1) != 0) {
+                    parser.parseByDayOrPeriod(currencyDao, date1, null, cbid, null, 2);
+                    currList.add(0, currencyDao.searchByDateCbIdCurrencyPeriod(date1, cbid));
+                    //currList = currencyDao.showByPeriod(date1, date2, cbid, cbidp);
+                }
+                if (currList.get(0).getDateRec().compareTo((date2)) == 0) {
+                    parser.parseByDayOrPeriod(currencyDao, date1, null, cbid, null, 2);
+                    currList.add(0, currencyDao.searchByDateCbIdCurrencyPeriod(date1, cbid));
+                }
+                for (Date d : dateList) {
+                    for (int i = currList.size() - 1; i >= 0; i--) {
+                        if (currList.get(i).getDateRec().compareTo(d) < 0) {
+                            currency curr = new currency();
+                            curr.setCbId(currList.get(i).getCbId());
+                            curr.setCbIdP(currList.get(i).getCbIdP());
+                            curr.setName(currList.get(i).getName());
+                            curr.setNumCode(currList.get(i).getNumCode());
+                            curr.setCharCode(currList.get(i).getCharCode());
+                            curr.setNominal(currList.get(i).getNominal());
+                            curr.setValue(currList.get(i).getValue());
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                            String sd = sdf.format(d);
+                            d = sdf.parse(sd);
+                            curr.setDateRec(d);
+                            currList.add(i + 1, curr);
+                            currencyDao.updateCurrencyPeriod(curr);
+                            break;
+                        }
+                    }
+                }
+            }
+        } else {
+            currList.clear();
+            currList.addAll(currencyDao.showByPeriod(date1, date2, cbid, cbidp));
+        }
+        return currList;
+    }
+
     @GetMapping("/single")
-    public String showByDateOne(@RequestParam("date") @DateTimeFormat(pattern = "dd.MM.yyyy") Date date,
+    public MappingJackson2JsonView showByDateOne(@RequestParam("date") @DateTimeFormat(pattern = "dd.MM.yyyy") Date date,
                                @RequestParam("cbid") String cbid, Model model) throws ParseException, IOException, ParserConfigurationException, SAXException {
         dateFormat = frmt.format(date);
         date = frmt.parse(dateFormat);
@@ -227,7 +409,10 @@ public class currencyController {
             }
             else {
                 model.addAttribute("errMessage", "No data found");
-                return "currency/error";
+                MappingJackson2JsonView view = new MappingJackson2JsonView();
+                view.setPrettyPrint(true);
+                return view;
+                //return "currency/error";
             }
         }
         /*currency curr = currencyDao.showByDateCbId(date, cbid);
@@ -242,16 +427,30 @@ public class currencyController {
         model.addAttribute("currency", curr);*/
         currency curr = currencyDao.showSingleByDateCbId(date, cbid);
         if(curr == null) {
-            parser.parseByDayOrPeriod(currencyDao, date, null, null, null);
+            parser.parseByDayOrPeriod(currencyDao, date, null, null, null, 1);
             curr = currencyDao.showSingleByDateCbId(date, cbid);
             if(curr == null) {
                 model.addAttribute("errMessage", "No data found");
-                return "currency/error";
+                MappingJackson2JsonView view = new MappingJackson2JsonView();
+                view.setPrettyPrint(true);
+                return view;
+                //return "currency/error";
             }
         }
         model.addAttribute("currency", curr);
-        return "currency/single";
+        //return "currency/single";
+        MappingJackson2JsonView view = new MappingJackson2JsonView();
+        view.setPrettyPrint(true);
+        return view;
     }
+    @GetMapping("/info")
+    public MappingJackson2JsonView getCbIdName(Model model) {
+        MappingJackson2JsonView view = new MappingJackson2JsonView();
+        view.setPrettyPrint(true);
+        model.addAttribute("info", currencyDao.getCbIdName());
+        return view;
+    }
+
     @GetMapping("/hhh")
     public String index() throws IOException, ParserConfigurationException, ParseException, SAXException {
         //parser.parseArchive(currencyDao, 1);
